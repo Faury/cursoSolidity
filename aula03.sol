@@ -1,4 +1,4 @@
- // SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
 //Construir um contrato de aluguel que armazene:
@@ -7,45 +7,53 @@ pragma solidity 0.8.20;
 //- array com o valor do aluguel por 36 meses
 contract Aluguel {
 
-    string public locador;
-    string public locatario;
-    uint256[36] public valorAluguel;
+    uint8 constant public MAXIMO_NUMERO_PARCELAS = 36;
+    ContratoAluguel private contratoAluguel;
+    string[] mobilia;
+    mapping(string => string) estadoMobilia; 
+
+    struct ContratoAluguel {
+        string locador;
+        string locatario;
+        uint256[MAXIMO_NUMERO_PARCELAS] valorAluguel;
+    }
 
     //O nome das partes, locador e locatário, e o valor inicial de cada aluguel deve ser informado no momento da publicação do contrato.
     constructor(string memory _locador, string memory _locatario, uint256 valorInicialAluguel) {
-        locador = _locador;
-        locatario = _locatario;
 
-        for (uint8 i=0; i<valorAluguel.length; i++) {
-            valorAluguel[i] = valorInicialAluguel;
+        uint256[MAXIMO_NUMERO_PARCELAS] memory valoresAluguel;
+        for (uint8 i=0; i<valoresAluguel.length; i++) {
+            valoresAluguel[i] = valorInicialAluguel;
         }
+
+        contratoAluguel = ContratoAluguel(_locador, _locatario, valoresAluguel);
+
     }
 
-//O contrato também deve ter:
+    modifier somenteMesValido(uint8 _numeroMes) {
+        require(_numeroMes > MAXIMO_NUMERO_PARCELAS, "Mes invalido");
+        _;
+    }
 
 //- funcao que recebe o numero do mes e retorna o valor do aluguel daquele mes
-    function retornaValorAluguelMes(uint256 numeroMes) public view returns (uint256) {
-        if (numeroMes > 36) {
-            return 0;
-        }
-        
-        return valorAluguel[numeroMes-1];
+    function retornaValorAluguelMes(uint8 _numeroMes) public view somenteMesValido(_numeroMes) returns (uint256) {
+        return contratoAluguel.valorAluguel[_numeroMes-1];
     }
 
 //- funcao que retorna o nome do locador e do locatario
     function retornaLocadorLocatario() public view returns (string memory nomeLocador, string memory nomeLocatario) {
-        return (locador, locatario);
+        return (contratoAluguel.locador, contratoAluguel.locatario);
     }
 
 //- funcao que altera o nome do locador se você passar o tipoPessoa 1 e alterna o nome do locatario se voce passar o tipoPessoa 2
     function alteraPessoa(string memory pessoa, uint8 tipoPessoa) public returns (bool) {
         
         if (tipoPessoa == 1) {
-            locador = pessoa;
+            contratoAluguel.locador = pessoa;
         } else if (tipoPessoa == 2) {
-            locatario = pessoa;
+            contratoAluguel.locatario = pessoa;
         } else {
-            return false;
+            revert("Tipo de pessoa invalido, deve ser 1 para locador e 2 para locatario");
         }
 
         return true;
@@ -53,19 +61,45 @@ contract Aluguel {
 
 //- funcao que reajusta os valores dos alugueis após de um determinado mes. 
 //Exemplo: soma 100 aos alugueis depois do mes 15
-    function alteraValorAluguel(uint8 numeroMes, uint256 valorNovoAluguel) public returns (bool) {
-        if (numeroMes > 36) {
-            return false;
-        }
+    function alteraValorAluguel(uint8 _numeroMes, uint256 _valorNovoAluguel) public somenteMesValido(_numeroMes) returns (bool) {
+        require(_valorNovoAluguel>0, "O novo valor deve ser preenchido!");
         
-        for (uint8 i=numeroMes-1; i < valorAluguel.length; i++) {
-            valorAluguel[i] = valorNovoAluguel;
+        for (uint8 i=_numeroMes-1; i < contratoAluguel.valorAluguel.length; i++) {
+            contratoAluguel.valorAluguel[i] = _valorNovoAluguel;
         }
 
         return true;
     }
 
+    //adiciona Mobilia
+    function adicionaMobilia(string memory _itemMobilia, string memory _estadoItem) public returns (bool) {
+        
+        mobilia.push(_itemMobilia);
+        estadoMobilia[_itemMobilia] = _estadoItem;
 
+        return true;
+    }
+
+    //retorna Mobilia
+    function retornaMobilia() public view returns (string[] memory) {
+        return mobilia;
+    }
+
+    //retorna estadoMobilia
+    function retornaEstadoMobilia(string memory _mobilia) public view returns (string memory) {
+        bool found;
+        for (uint i=0;i<mobilia.length;i++) {
+            if (keccak256(abi.encodePacked(mobilia[i])) == keccak256(abi.encodePacked(_mobilia))) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            revert("Mobilia nao presente");
+        }
+        
+        return estadoMobilia[_mobilia];
+    }
 }
 
-//https://sepolia.etherscan.io/address/0x3F5Bee678C541437F789465FEE265478B11e5B9d
+//https://sepolia.etherscan.io/address/0x2370CcB360C65cdA52089A0fF7e48F4Dd9E15250
