@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: MIT
+ // SPDX-License-Identifier: MIT
 pragma solidity 0.8.20;
 
 //Construir um contrato de aluguel que armazene:
@@ -9,13 +9,13 @@ contract Aluguel {
 
     uint8 constant public MAXIMO_NUMERO_PARCELAS = 36;
     ContratoAluguel private contratoAluguel;
-    string[] mobilia;
-    mapping(string => string) estadoMobilia; 
 
     struct ContratoAluguel {
         string locador;
         string locatario;
         uint256[MAXIMO_NUMERO_PARCELAS] valorAluguel;
+        string[] mobilia;
+        mapping(string => string) estadoMobilia; 
     }
 
     //O nome das partes, locador e locatário, e o valor inicial de cada aluguel deve ser informado no momento da publicação do contrato.
@@ -26,12 +26,13 @@ contract Aluguel {
             valoresAluguel[i] = valorInicialAluguel;
         }
 
-        contratoAluguel = ContratoAluguel(_locador, _locatario, valoresAluguel);
-
+        contratoAluguel.locador =  _locador;
+        contratoAluguel.locatario = _locatario;
+        contratoAluguel.valorAluguel = valoresAluguel;
     }
 
     modifier somenteMesValido(uint8 _numeroMes) {
-        require(_numeroMes > MAXIMO_NUMERO_PARCELAS, "Mes invalido");
+        require(_numeroMes < MAXIMO_NUMERO_PARCELAS, "Mes invalido");
         _;
     }
 
@@ -74,22 +75,22 @@ contract Aluguel {
     //adiciona Mobilia
     function adicionaMobilia(string memory _itemMobilia, string memory _estadoItem) public returns (bool) {
         
-        mobilia.push(_itemMobilia);
-        estadoMobilia[_itemMobilia] = _estadoItem;
+        contratoAluguel.mobilia.push(_itemMobilia);
+        contratoAluguel.estadoMobilia[_itemMobilia] = _estadoItem;
 
         return true;
     }
 
     //retorna Mobilia
     function retornaMobilia() public view returns (string[] memory) {
-        return mobilia;
+        return contratoAluguel.mobilia;
     }
 
     //retorna estadoMobilia
     function retornaEstadoMobilia(string memory _mobilia) public view returns (string memory) {
         bool found;
-        for (uint i=0;i<mobilia.length;i++) {
-            if (keccak256(abi.encodePacked(mobilia[i])) == keccak256(abi.encodePacked(_mobilia))) {
+        for (uint i=0;i<contratoAluguel.mobilia.length;i++) {
+            if (keccak256(abi.encodePacked(contratoAluguel.mobilia[i])) == keccak256(abi.encodePacked(_mobilia))) {
                 found = true;
                 break;
             }
@@ -98,8 +99,8 @@ contract Aluguel {
             revert("Mobilia nao presente");
         }
         
-        return estadoMobilia[_mobilia];
+        return contratoAluguel.estadoMobilia[_mobilia];
     }
 }
 
-//https://sepolia.etherscan.io/address/0x2370CcB360C65cdA52089A0fF7e48F4Dd9E15250
+//https://sepolia.etherscan.io/address/0xD1778c44E2f804DaD77B0cE628434105Fe17f0B0
